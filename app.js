@@ -18,7 +18,23 @@ const app = express();
 
 //跨域处理
 app.all('*', (req, res, next) => {
-    log(req.method + ' ' + req.originalUrl);
+    const start = Date.now();
+    log.info(`→ ${req.method} ${req.originalUrl}`);
+
+    // 拦截 res.json，在响应发出时打印摘要
+    const _json = res.json.bind(res);
+    res.json = function (body) {
+        const ms = Date.now() - start;
+        const status = body && body.status;
+        const count = Array.isArray(body && body.data) ? body.data.length : '-';
+        if (status === false) {
+            log.warn(`← ${req.method} ${req.originalUrl} | 失败: ${body.msg} | ${ms}ms`);
+        } else {
+            log.info(`← ${req.method} ${req.originalUrl} | ${count} 条数据 | ${ms}ms`);
+        }
+        return _json(body);
+    };
+
     next();
 } , cors);
 

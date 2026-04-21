@@ -1,0 +1,17 @@
+services:
+  douban-api:
+    build: .
+    ports:
+      - "8085:8085"
+    volumes:
+      # 挂载源码，本地改动实时同步进容器
+      - ./app.js:/app/app.js
+      - ./config:/app/config
+      - ./controllers:/app/controllers
+      - ./middlewares:/app/middlewares
+      - ./models:/app/models
+      - ./routes:/app/routes
+      - ./utils:/app/utils
+    command: npm run dev
+    environment:
+      - NODE_ENV=development

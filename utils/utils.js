@@ -1,12 +1,6 @@
 const clc = require("cli-color");
 const moment = require('moment');
 
-/**
- *  获取本机IP地址
- *  
- * @param {*} val
- * @returns
- */
 exports.getIPAdress = function () {
     let interfaces = require('os').networkInterfaces();
     for (let devName in interfaces) {
@@ -20,21 +14,34 @@ exports.getIPAdress = function () {
     }
 }
 
-//命令行日志输出
-function log(...logs) {
-    try {
-        logs.forEach((item) => {
-            let log = typeof item === 'object' ? JSON.stringify(item, null, 4) : item;
-            log = ' - ' + log;
-            let now = moment().format("YYYY-MM-DD HH:MM:SS");
-            let _clc = clc.xterm(202);
-            console.log('  ' + _clc(now) + clc.white(log));
-        });
-    } catch (error) { }
+const LEVELS = {
+    INFO:  { color: clc.xterm(202), label: 'INFO ' },
+    DEBUG: { color: clc.xterm(245), label: 'DEBUG' },
+    WARN:  { color: clc.xterm(214), label: 'WARN ' },
+    ERROR: { color: clc.xterm(196), label: 'ERROR' },
 };
+
+function log(level, ...messages) {
+    if (typeof level !== 'string' || !LEVELS[level]) {
+        // 兼容旧的 log('message') 调用
+        messages = [level, ...messages];
+        level = 'INFO';
+    }
+    const { color, label } = LEVELS[level];
+    const now = moment().format('YYYY-MM-DD HH:mm:ss');
+    messages.forEach((item) => {
+        const text = typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item);
+        console.log(`  ${clc.xterm(240)(now)} ${color(`[${label}]`)} ${clc.white(text)}`);
+    });
+}
+
+log.info  = (...args) => log('INFO',  ...args);
+log.debug = (...args) => log('DEBUG', ...args);
+log.warn  = (...args) => log('WARN',  ...args);
+log.error = (...args) => log('ERROR', ...args);
+
 exports.log = log;
 
-//如果不是数字的话返回默认值
 exports.toNum = function (num, _default) {
     _default = _default || num;
     if (!num) {
@@ -43,7 +50,6 @@ exports.toNum = function (num, _default) {
     return isNaN(Number(num)) ? _default : num;
 }
 
-//去除字符串中的\n和空格
 exports.trims = function (str) {
     return str ? str.replace(/[\\n\s]+/img, '') : str;
 }
