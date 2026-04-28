@@ -27,7 +27,7 @@ class Movie {
      * @memberof Movie
      */
     async list(req, res) {
-        log('根据关键词搜索影视列表');
+        log.info('根据关键词搜索影视列表');
         await listModel.list(req, res, this.moviePageUrl, this.catNum, this.pageSize);
     }
 
@@ -39,7 +39,7 @@ class Movie {
      * @memberof Movie
      */
     async detail(req, res) {
-        log('获取影视的详细信息');
+        log.info('获取影视的详细信息');
         await detailModel.detail(req, res, this.catNum);
     }
 }

@@ -1,6 +1,16 @@
 const load = require('../utils/load');
 const { log, trims } = require('../utils/utils');
 
+const ALLOWED_CAT_NUMS = ['1001', '1002', '1003'];
+
+function sanitizeQuery(query = {}) {
+    return Object.keys(query).reduce((result, key) => {
+        const value = query[key];
+        result[key] = /(token|key|secret|auth|session)/i.test(key) ? '***' : value;
+        return result;
+    }, {});
+}
+
 const Detail = {
     /**
      *  获取详细信息
@@ -18,19 +28,56 @@ const Detail = {
         }
         let url = req.query.url;
         if (!url) {
-            resData.msg = '参数有误';
+            resData.msg = '参数有误：缺少 url';
+            log.warn({
+                action: 'detail',
+                catNum,
+                query: sanitizeQuery(req.query),
+                msg: resData.msg
+            });
             res.json(resData);
             return false;
         }
-        let data = await Detail._detail(url, catNum);
-        let endTime = Date.now();
-        resData = {
-            status: true,
-            msg: '获取成功',
-            time: (endTime - startTime) / 1000 + 's',
-            data: data
+        if (!ALLOWED_CAT_NUMS.includes(String(catNum))) {
+            log.error({
+                action: 'detail',
+                catNum,
+                query: sanitizeQuery(req.query),
+                msg: '非法分类参数'
+            });
+            res.status(400).json({
+                status: false,
+                msg: '非法分类参数',
+                data: null
+            });
+            return false;
         }
-        res.json(resData);
+        log.info(`开始抓取详情: cat=${catNum}, url=${url}`);
+        try {
+            let data = await Detail._detail(url, catNum);
+            let endTime = Date.now();
+            log.info(`详情抓取成功: cat=${catNum}, title=${data && data.title ? data.title : '(无标题)'}, cost=${endTime - startTime}ms`);
+            resData = {
+                status: true,
+                msg: '获取成功',
+                time: (endTime - startTime) / 1000 + 's',
+                data: data
+            }
+            res.json(resData);
+        } catch (error) {
+            log.error({
+                action: 'detail',
+                catNum,
+                query: sanitizeQuery(req.query),
+                url,
+                error: error && error.stack ? error.stack : String(error)
+            });
+            res.json({
+                status: false,
+                msg: '详情抓取失败',
+                data: null
+            });
+        }
     },
 
     //获取某本书籍的详细信息

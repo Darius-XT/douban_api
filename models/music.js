@@ -27,7 +27,7 @@ class Music {
      * @memberof Music
      */
     async list(req, res) {
-        log('根据关键词搜索音乐列表');
+        log.info('根据关键词搜索音乐列表');
         await listModel.list(req, res, this.musicPageUrl, this.catNum, this.pageSize);
     }
 
@@ -39,7 +39,7 @@ class Music {
      * @memberof Music
      */
     async detail(req, res) {
-        log('获取音乐的详细信息');
+        log.info('获取音乐的详细信息');
         await detailModel.detail(req, res, this.catNum);
     }
 }

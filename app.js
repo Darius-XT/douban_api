@@ -16,12 +16,28 @@ const router = require('./routes/index');
 //创建应用
 const app = express();
 
-//跨域处理
-app.all('*', (req, res, next) => {
-    const start = Date.now();
-    log.info(`→ ${req.method} ${req.originalUrl}`);
+function sanitizeQuery(query = {}) {
+    return Object.keys(query).reduce((result, key) => {
+        const value = query[key];
+        result[key] = /(token|key|secret|auth|session)/i.test(key) ? '***' : value;
+        return result;
+    }, {});
+}
 
-    // 拦截 res.json，在响应发出时打印摘要
+//跨域处理
+app.use((req, res, next) => {
+    const start = Date.now();
+    const requestMeta = {
+        method: req.method,
+        url: req.originalUrl,
+        query: sanitizeQuery(req.query),
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+    };
+
+    log.info(`→ ${req.method} ${req.originalUrl}`);
+    log.debug(requestMeta);
+
     const _json = res.json.bind(res);
     res.json = function (body) {
         const ms = Date.now() - start;
@@ -29,6 +45,10 @@ app.all('*', (req, res, next) => {
         const count = Array.isArray(body && body.data) ? body.data.length : '-';
         if (status === false) {
             log.warn(`← ${req.method} ${req.originalUrl} | 失败: ${body.msg} | ${ms}ms`);
+            log.debug({
+                request: requestMeta,
+                response: body
+            });
         } else {
             log.info(`← ${req.method} ${req.originalUrl} | ${count} 条数据 | ${ms}ms`);
         }
@@ -36,19 +56,38 @@ app.all('*', (req, res, next) => {
     };
 
     next();
-} , cors);
+});
+
+app.use(cors);
 
 //路由
 app.use(router);
 
 //处理404响应
 app.use(function (req, res, next) {
-    log(404);
+    log.warn(`404 ${req.method} ${req.originalUrl}`);
+    res.status(404).json({
+        status: false,
+        msg: '接口不存在',
+        data: null
+    });
 });
 
 //错误处理
 app.use(function (err, req, res, next) {
-    log('兜底错误处理：' + err);
+    const errorMeta = {
+        method: req.method,
+        url: req.originalUrl,
+        query: sanitizeQuery(req.query),
+        stack: err && err.stack ? err.stack : String(err)
+    };
+    log.error('兜底错误处理');
+    log.error(errorMeta);
+    res.status(500).json({
+        status: false,
+        msg: '服务器内部错误',
+        data: null
+    });
 });
 
 //监听端口

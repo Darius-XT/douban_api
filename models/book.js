@@ -27,7 +27,7 @@ class Book {
      * @memberof Book
      */
     async list(req, res) {
-        log('根据关键词搜索书籍列表');
+        log.info('根据关键词搜索书籍列表');
         await listModel.list(req, res, this.bookPageUrl, this.catNum, this.pageSize);
     }
 
@@ -39,7 +39,7 @@ class Book {
      * @memberof Book
      */
     async detail(req, res) {
-        log('获取某本书籍的详细信息');
+        log.info('获取某本书籍的详细信息');
         await detailModel.detail(req, res, this.catNum);
     }
 }

@@ -1,6 +1,14 @@
 const load = require('../utils/load');
 const { log, toNum } = require('../utils/utils');
 
+function sanitizeQuery(query = {}) {
+    return Object.keys(query).reduce((result, key) => {
+        const value = query[key];
+        result[key] = /(token|key|secret|auth|session)/i.test(key) ? '***' : value;
+        return result;
+    }, {});
+}
+
 const List = {
     /**
      *  根据关键词搜索列表
@@ -17,21 +25,44 @@ const List = {
         let key = req.query.key;
         let page = toNum(req.query.page, 1);
         if (!key) {
-            resData.msg = '参数有误';
+            resData.msg = '参数有误：缺少 key';
+            log.warn({
+                action: 'list',
+                catNum,
+                query: sanitizeQuery(req.query),
+                msg: resData.msg
+            });
             res.json(resData);
             return false;
         }
         let _url = `${baseUrl}?search_text=${encodeURIComponent(key)}&cat=${catNum}&start=${(page - 1) * pageSize}`;
-        let $ = await load(_url);
-        let _data = List.listAnalysis($, catNum);
-        let endTime = Date.now();
-        resData = {
-            status: true,
-            msg: '获取成功',
-            time: (endTime - startTime) / 1000 + 's',
-            data: _data
+        log.info(`开始抓取列表: ${_url}`);
+        try {
+            let $ = await load(_url);
+            let _data = List.listAnalysis($, catNum);
+            let endTime = Date.now();
+            log.info(`列表抓取成功: cat=${catNum}, key=${key}, page=${page}, count=${_data.length}, cost=${endTime - startTime}ms`);
+            resData = {
+                status: true,
+                msg: '获取成功',
+                time: (endTime - startTime) / 1000 + 's',
+                data: _data
+            }
+            res.json(resData);
+        } catch (error) {
+            log.error({
+                action: 'list',
+                catNum,
+                query: sanitizeQuery(req.query),
+                url: _url,
+                error: error && error.stack ? error.stack : String(error)
+            });
+            res.json({
+                status: false,
+                msg: '列表抓取失败',
+                data: null
+            });
         }
-        res.json(resData);
     },
 
     //搜索列表结构分析转数据
